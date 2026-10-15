@@ -1,0 +1,22 @@
+name: "pulsemetrics"
+
+version: "1.0.0"
+
+profile: "pulsemetrics"
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+models:
+  pulsemetrics:
+    staging:
+      +schema: STAGING
+
+    intermediate:
+      +schema: INTERMEDIATE
+
+    marts:
+      +schema: MARTS

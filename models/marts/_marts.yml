@@ -1,0 +1,36 @@
+
+version: 2
+
+models:
+  - name: mart_monthly_revenue
+    description: >
+      Monthly revenue metrics for the PulseMetrics SaaS business.
+      One row per month, with active customers, active subscriptions,
+      contracted MRR, and average revenue per account (ARPA).
+
+    columns:
+      - name: month_start
+        description: First day of the reporting month.
+        tests:
+          - not_null
+          - unique
+
+      - name: active_customers
+        description: Number of distinct customers with active subscriptions.
+        tests:
+          - not_null
+
+      - name: active_subscriptions
+        description: Number of active subscriptions during the month.
+        tests:
+          - not_null
+
+      - name: contracted_mrr
+        description: Contracted monthly recurring revenue from monthly plans, in USD.
+        tests:
+          - not_null
+
+      - name: arpa
+        description: Contracted MRR divided by active customers, in USD.
+        tests:
+          - not_null

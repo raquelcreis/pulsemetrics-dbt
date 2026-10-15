@@ -1,0 +1,24 @@
+
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw source tables ingested into Snowflake."
+    database: PULSEMETRICS
+    schema: RAW
+
+    tables:
+      - name: customers
+        description: "One row per customer or company."
+
+      - name: plans
+        description: "Commercial plan catalog, with one row per plan version."
+
+      - name: subscriptions
+        description: "One row per customer subscription period."
+
+      - name: payments
+        description: "One row per payment attempt for a billing period."
+
+      - name: product_events
+        description: "One row per customer-level product event."

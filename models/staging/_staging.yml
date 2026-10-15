@@ -1,0 +1,111 @@
+
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Cleaned customer records from the raw source."
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: email
+        data_tests:
+          - not_null
+          - unique
+
+      - name: country_raw
+        data_tests:
+          - not_null
+
+  - name: stg_plans
+    description: "Standardized commercial plan catalog."
+    columns:
+      - name: plan_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: monthly_price
+        data_tests:
+          - not_null
+
+  - name: stg_subscriptions
+    description: "Standardized customer subscription periods."
+    columns:
+      - name: subscription_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+      - name: plan_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_plans')
+                field: plan_id
+
+  - name: stg_payments
+    description: "Standardized payment attempts."
+    columns:
+      - name: payment_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: subscription_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_subscriptions')
+                field: subscription_id
+
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['PAID', 'FAILED', 'REFUNDED']
+
+      - name: amount
+        data_tests:
+          - not_null
+
+  - name: stg_product_events
+    description: "Standardized customer-level product events."
+    columns:
+      - name: event_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+      - name: event_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - LOGIN
+                  - DASHBOARD_VIEWED
+                  - REPORT_CREATED
+                  - REPORT_EXPORTED
+                  - INTEGRATION_CONNECTED
+                  - TEAM_MEMBER_ADDED
