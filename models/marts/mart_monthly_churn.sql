@@ -33,7 +33,11 @@ month_bounds AS (
     SELECT
         DATE_TRUNC('MONTH', MIN(activity_start_date))::DATE
             AS first_month,
-        DATE_TRUNC('MONTH', CURRENT_DATE())::DATE
+        DATEADD(
+            MONTH,
+            -1,
+            DATE_TRUNC('MONTH', CURRENT_DATE())
+        )::DATE
             AS last_month
     FROM activity_periods
 

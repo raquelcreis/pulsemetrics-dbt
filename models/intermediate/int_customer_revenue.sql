@@ -1,9 +1,9 @@
 
--- Calculate contracted monthly recurring revenue per customer.
+-- Calculate month-end contracted monthly recurring revenue per customer.
 --
 -- Grain: one row per customer and calendar month.
--- Revenue is based on active subscriptions and plan prices,
--- not on payment attempts or payment status.
+-- Input subscription periods are month-end snapshots. Revenue is based
+-- on monthly plan prices, not payment attempts or payment status.
 
 WITH subscription_months AS (
 

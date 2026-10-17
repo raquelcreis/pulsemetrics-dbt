@@ -1,6 +1,6 @@
 
--- One row per subscription and calendar month
--- with any overlap between the subscription and the month.
+-- One row per subscription and completed calendar month
+-- when the subscription is active at month end.
 --
 -- Lifecycle interval: [start_date, end_date)
 -- Start is inclusive; end is exclusive.
@@ -24,7 +24,7 @@ month_bounds AS (
         DATE_TRUNC('MONTH', MIN(start_date))::DATE AS first_month,
         DATEADD(
             MONTH,
-            1,
+            -1,
             DATE_TRUNC('MONTH', CURRENT_DATE())
         )::DATE AS last_month
     FROM subscriptions
@@ -76,7 +76,7 @@ subscription_months AS (
         )
         AND (
             s.end_date IS NULL
-            OR s.end_date > m.month_start
+            OR s.end_date >= DATEADD(MONTH, 1, m.month_start)
         )
 
 )

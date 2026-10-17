@@ -42,11 +42,13 @@ churn_events AS (
         activity_end_date AS churn_date,
         next_activity_start_date,
 
-        next_activity_start_date IS NOT NULL
-            AS is_reactivated,
+        CASE
+            WHEN next_activity_start_date <= CURRENT_DATE() THEN TRUE
+            ELSE FALSE
+        END AS is_reactivated,
 
         CASE
-            WHEN next_activity_start_date IS NOT NULL
+            WHEN next_activity_start_date <= CURRENT_DATE()
             THEN DATEDIFF(
                 DAY,
                 activity_end_date,

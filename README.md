@@ -27,26 +27,27 @@ The project follows a layered data modeling approach:
 - [x] Python ingestion pipeline for RAW tables.
 - [x] dbt staging models and data quality tests.
 - [x] Billing period consolidation to handle multiple payment attempts.
-- [x] Subscription lifecycle modeling at monthly grain.
+- [x] Subscription lifecycle modeling and completed-month revenue snapshots.
 - [x] Customer-level contracted MRR modeling.
 - [x] Monthly revenue mart with active customers, active subscriptions, contracted MRR, and ARPA.
 - [x] Initial data quality tests and documentation for the revenue mart.
 - [x] Initial documentation of the customer churn proxy methodology.
-- [ ] Customer churn intermediate model and monthly churn mart.
+- [x] Customer churn proxy intermediate model and completed-month churn mart.
 - [ ] Additional business-facing marts and analytical insights.
 - [ ] Automated validation in CI.
 
 ## Key Business Metrics
 
-- **Contracted MRR:** monthly recurring revenue estimated from active subscriptions on monthly plans.
-- **ARPA (Average Revenue Per Account):** contracted MRR divided by the number of active customers.
-- **Customer churn:** planned as a proxy derived from subscription lifecycle dates, identifying when a customer has no active subscriptions remaining.
+- **Contracted MRR:** month-end run rate from active monthly subscriptions at the end of each completed month. It is not prorated or based on payment attempts.
+- **Active customers and subscriptions:** customers with at least one active subscription, and subscriptions active, at the same month-end snapshot.
+- **ARPA (Average Revenue Per Account):** month-end contracted MRR divided by month-end active customers.
+- **Customer churn:** an estimate inferred when a customer's continuous subscription activity period ends. The monthly rate uses churned customers from the opening base divided by customers active immediately before the month began. Only completed months are included.
 
 ## Data and Methodology Notes
 
 The data is synthetic and intended for learning and demonstration.
 
-Customer churn is not directly recorded as an explicit cancellation event in the source data. The planned methodology reconstructs customer activity from subscription start and end dates. Assumptions and limitations are documented in `docs/metrics/customer_churn.md`.
+Customer churn is not directly recorded as an explicit cancellation event in the source data. The implemented proxy reconstructs customer activity from subscription start and end dates; same-day plan changes remain continuous, and reactivation is realized only when a later activity period has started. Assumptions and limitations are documented in `docs/metrics/customer_churn.md`.
 
 ## Repository Structure
 
