@@ -34,3 +34,26 @@ models:
         description: Contracted MRR divided by active customers, in USD.
         tests:
           - not_null
+
+
+  - name: mart_monthly_churn
+    description: >
+      Monthly estimated customer churn metrics based on subscription
+      lifecycle dates. Churn is inferred, not directly observed.
+    columns:
+      - name: month_start
+        data_tests:
+          - not_null
+          - unique
+
+      - name: opening_active_customers
+        data_tests:
+          - not_null
+
+      - name: churned_customers
+        data_tests:
+          - not_null
+
+      - name: customer_churn_rate
+        data_tests:
+          - not_null
