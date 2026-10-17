@@ -2,7 +2,8 @@
 SELECT *
 FROM {{ ref('mart_monthly_churn') }}
 WHERE
-    opening_active_customers < 0
+    month_start >= DATE_TRUNC('MONTH', CURRENT_DATE())
+    OR opening_active_customers < 0
     OR churned_customers < 0
     OR churned_customers > opening_active_customers
     OR customer_churn_rate < 0

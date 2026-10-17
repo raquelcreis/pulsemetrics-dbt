@@ -7,6 +7,7 @@ WITH customer_revenue AS (
         active_subscriptions,
         contracted_mrr
     FROM {{ ref('int_customer_revenue') }}
+    WHERE month_start < DATE_TRUNC('MONTH', CURRENT_DATE())
 
 ),
 

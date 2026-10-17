@@ -5,8 +5,8 @@ models:
   - name: mart_monthly_revenue
     description: >
       Monthly revenue metrics for the PulseMetrics SaaS business.
-      One row per month, with active customers, active subscriptions,
-      contracted MRR, and average revenue per account (ARPA).
+      One row per completed month, measured at month end, with active
+      customers, active subscriptions, contracted MRR, and ARPA.
 
     columns:
       - name: month_start
@@ -16,30 +16,32 @@ models:
           - unique
 
       - name: active_customers
-        description: Number of distinct customers with active subscriptions.
+        description: Distinct customers with at least one active subscription at month end.
         tests:
           - not_null
 
       - name: active_subscriptions
-        description: Number of active subscriptions during the month.
+        description: Subscriptions active at month end.
         tests:
           - not_null
 
       - name: contracted_mrr
-        description: Contracted monthly recurring revenue from monthly plans, in USD.
+        description: Month-end contracted run rate from monthly plans, in USD; not prorated or payment-derived.
         tests:
           - not_null
 
       - name: arpa
-        description: Contracted MRR divided by active customers, in USD.
+        description: Month-end contracted MRR divided by month-end active customers, in USD.
         tests:
           - not_null
 
 
   - name: mart_monthly_churn
     description: >
-      Monthly estimated customer churn metrics based on subscription
-      lifecycle dates. Churn is inferred, not directly observed.
+      Completed-month estimated customer churn metrics based on subscription
+      lifecycle dates. Churn is inferred, not directly observed. The rate is
+      churned opening-base customers divided by customers active immediately
+      before the month began.
     columns:
       - name: month_start
         data_tests:

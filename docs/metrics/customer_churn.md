@@ -2,52 +2,33 @@
 
 ## 1. Business definition
 
-Customer churn occurs when a customer no longer has any active subscription.
+PulseMetrics has no explicit, reliable cancellation event. Customer churn is therefore an estimate based on subscription lifecycle dates, not an observed cancellation metric.
 
-PulseMetrics does not have an explicit, reliable field identifying customer cancellation events. Therefore, customer churn is estimated using a proxy derived from subscription lifecycle data.
+## 2. Activity periods and churn events
 
-## 2. Proxy methodology
+Subscription validity follows `[start_date, end_date)`: the start date is inclusive and the end date is exclusive. A null `end_date` represents an open-ended subscription.
 
-The churn date is identified as the date on which a customer has no active subscriptions remaining.
+The models combine each customer's subscription intervals into continuous activity periods. Overlapping subscriptions and same-day transitions remain one period, so a plan change alone does not count as churn. A positive gap between periods produces a churn event at the end of the prior activity period. A later period is a realized reactivation only when its start date is on or before `CURRENT_DATE()`; a future-dated period does not yet count as a reactivation. Future end dates are not realized churn events.
 
-The analysis uses the following source fields:
+Because an end date may represent an upgrade or downgrade, a gap is a lifecycle-based churn proxy and does not prove cancellation or loss of access.
 
-- `customer_id`: identifies the customer.
-- `subscription_id`: identifies each subscription.
-- `start_date`: beginning of the subscription validity period.
-- `end_date`: end of the subscription validity period.
+## 3. Monthly churn rate
 
-Subscription validity follows the interval `[start_date, end_date)`: the start date is inclusive and the end date is exclusive. A subscription with a null `end_date` is treated as having no recorded end date.
+The mart contains completed calendar months only. For each month:
 
-The proxy is based on the combined lifecycle of all subscriptions belonging to a customer, rather than on individual subscription termination events.
+- Opening base: distinct customers active immediately before the month began.
+- Churned customers: opening-base customers whose activity period ends during that month.
+- Churn rate: churned opening-base customers divided by the opening base.
 
-## 3. Business rules
+Customers who start and end activity within the same month are excluded from that month's opening-base churn rate. The current incomplete month is excluded. Reactivations do not erase the earlier churn event; they begin a later activity period and can support a future churn event.
 
-1. Ending one subscription does not count as customer churn if another subscription remains active.
-2. Customer churn occurs when the last active subscription ends and no other subscription is active from that date onward.
-3. If a customer starts another subscription after a period without active subscriptions, the customer is considered reactivated. The previous churn event remains part of the historical record.
-4. A subscription ending on the same date another subscription starts does not create a gap in customer activity.
-5. Customers with no recorded subscription end date are not considered churned solely on that basis.
-6. Future end dates must not be counted as realized churn events before their effective date.
+## 4. Limitations
 
-## 4. Limitations and assumptions
+- The data does not identify cancellation reasons or confirm that access ended.
+- Missing or inaccurate subscription records can change inferred activity periods.
+- The rate is an opening-base customer churn rate, not a subscription churn rate or a payment-based cancellation rate.
+- A customer may have multiple lifecycle-based churn events after separate periods of activity.
 
-This is an analytical proxy, not a directly observed cancellation event.
+## 5. dbt implementation
 
-- The source data does not explicitly identify cancellation reasons.
-- An end date may represent a subscription lifecycle transition, such as an upgrade or downgrade, rather than a customer's departure.
-- The method assumes that subscription start and end dates accurately represent periods of customer access.
-- Data quality issues or missing subscription records may affect the estimated churn date.
-- A customer who churns and later returns can generate more than one churn event over time.
-
-## 5. Interpretation
-
-Metrics derived from this method should be described as estimated customer churn based on subscription lifecycle data.
-
-The methodology should be revisited if reliable cancellation events, cancellation reasons, or customer status history become available.
-
-## 6. dbt implementation
-
-The transformation should identify customer-level periods of activity by combining all subscription validity intervals for each customer. Churn events are then derived from the end of an active period when no other subscription overlaps or immediately continues that period.
-
-The implementation should be tested for subscription changes on the same date, gaps between subscriptions, reactivations, open-ended subscriptions, and future end dates.
+`int_customer_activity_periods` merges subscription intervals per customer. `int_customer_churn_events` emits completed activity-period ends and realized reactivation metadata. `mart_monthly_churn` applies the opening-base definition and includes completed months only.
