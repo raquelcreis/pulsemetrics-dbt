@@ -210,4 +210,3 @@ Planned improvements:
 PulseMetrics is a learning and portfolio project designed to demonstrate data modeling, metric definition, testing, and ingestion reliability.
 
 The source data is synthetic. Customer churn is an inferred proxy rather than a directly observed cancellation event, and the project does not claim to represent a production SaaS data platform in its entirety.
-
