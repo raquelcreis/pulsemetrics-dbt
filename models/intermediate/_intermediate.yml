@@ -1,0 +1,111 @@
+version: 2
+
+models:
+  - name: int_subscription_periods
+    description: >
+      Month-end subscription snapshots. One row per subscription and
+      completed calendar month in which the subscription is active at
+      month end. Lifecycle interval is [start_date, end_date).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - subscription_id
+              - month_start
+    columns:
+      - name: subscription_id
+        data_tests:
+          - not_null
+
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "First day of the completed month being snapshotted."
+        data_tests:
+          - not_null
+
+  - name: int_customer_revenue
+    description: >
+      Month-end contracted MRR per customer. One row per customer and
+      completed calendar month. Based on monthly plan prices, not on
+      payment attempts or payment status.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - month_start
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: month_start
+        data_tests:
+          - not_null
+
+  - name: int_billing_periods
+    description: >
+      Payment attempts consolidated into one row per subscription and
+      billing period. A successful attempt takes precedence over failed
+      or refunded attempts.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - subscription_id
+              - billing_period_start_date
+    columns:
+      - name: subscription_id
+        data_tests:
+          - not_null
+
+      - name: billing_period_start_date
+        data_tests:
+          - not_null
+
+  - name: int_customer_activity_periods
+    description: >
+      Continuous customer activity periods. One row per customer and
+      activity period; overlapping subscriptions and same-day transitions
+      are merged. A NULL activity_end_date means the period is ongoing.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - activity_period_number
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: activity_period_number
+        data_tests:
+          - not_null
+
+      - name: activity_start_date
+        data_tests:
+          - not_null
+
+  - name: int_customer_churn_events
+    description: >
+      Inferred customer churn events. One row per activity period that
+      ended on or before the current date. Churn is derived from
+      subscription lifecycle dates, not from an explicit cancellation event.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - activity_period_number
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: activity_period_number
+        data_tests:
+          - not_null
