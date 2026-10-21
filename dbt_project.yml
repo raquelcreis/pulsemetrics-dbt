@@ -5,7 +5,6 @@ version: "1.0.0"
 profile: "pulsemetrics"
 
 model-paths: ["models"]
-seed-paths: ["seeds"]
 snapshot-paths: ["snapshots"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
@@ -20,3 +19,4 @@ models:
 
     marts:
       +schema: MARTS
+      +materialized: table

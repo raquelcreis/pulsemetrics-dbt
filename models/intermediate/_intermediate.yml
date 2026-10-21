@@ -1,0 +1,157 @@
+version: 2
+
+models:
+  - name: int_calendar_months
+    description: >
+      Reporting calendar. One row per month from the first subscription
+      month through the last completed month before the as-of date.
+    columns:
+      - name: month_start
+        data_tests:
+          - not_null
+          - unique
+
+  - name: int_subscription_periods
+    description: >
+      Month-end subscription snapshots. One row per subscription and
+      completed calendar month in which the subscription is active at
+      month end. Lifecycle interval is [start_date, end_date).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - subscription_id
+              - month_start
+    columns:
+      - name: subscription_id
+        data_tests:
+          - not_null
+
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "First day of the completed month being snapshotted."
+        data_tests:
+          - not_null
+
+  - name: int_customer_revenue
+    description: >
+      Month-end contracted MRR per customer. One row per customer and
+      completed calendar month. Based on monthly plan prices, not on
+      payment attempts or payment status.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - month_start
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: month_start
+        data_tests:
+          - not_null
+
+  - name: int_billing_periods
+    description: >
+      Payment attempts consolidated into one row per subscription and
+      billing period. A successful attempt takes precedence over failed
+      or refunded attempts.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - subscription_id
+              - billing_period_start_date
+    columns:
+      - name: subscription_id
+        data_tests:
+          - not_null
+
+      - name: billing_period_start_date
+        data_tests:
+          - not_null
+
+  - name: int_customer_activity_periods
+    description: >
+      Continuous customer activity periods. One row per customer and
+      activity period; overlapping subscriptions and same-day transitions
+      are merged. A NULL activity_end_date means the period is ongoing.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - activity_period_number
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: activity_period_number
+        data_tests:
+          - not_null
+
+      - name: activity_start_date
+        data_tests:
+          - not_null
+
+  - name: int_customer_churn_events
+    description: >
+      Inferred customer churn events. One row per activity period that
+      ended on or before the current date. Churn is derived from
+      subscription lifecycle dates, not from an explicit cancellation event.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_id
+              - activity_period_number
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: activity_period_number
+        data_tests:
+          - not_null
+
+unit_tests:
+  - name: test_activity_periods_merge_rules
+    description: >
+      Proves how subscriptions collapse into continuous activity periods:
+      overlaps and same-day transitions merge, a real gap starts a new
+      period, a short subscription nested inside a longer one does not
+      split it, and an ongoing subscription keeps the period open.
+    model: int_customer_activity_periods
+    given:
+      - input: ref('stg_subscriptions')
+        rows:
+          # C_OVERLAP: second subscription starts before the first ends
+          - {customer_id: C_OVERLAP, subscription_id: S01, start_date: "2024-01-01", end_date: "2024-03-01"}
+          - {customer_id: C_OVERLAP, subscription_id: S02, start_date: "2024-02-01", end_date: "2024-05-01"}
+          # C_SAME_DAY: plan change on the same day the previous one ends
+          - {customer_id: C_SAME_DAY, subscription_id: S03, start_date: "2024-01-01", end_date: "2024-02-01"}
+          - {customer_id: C_SAME_DAY, subscription_id: S04, start_date: "2024-02-01", end_date: null}
+          # C_GAP: one month without any subscription -> two periods
+          - {customer_id: C_GAP, subscription_id: S05, start_date: "2024-01-01", end_date: "2024-02-01"}
+          - {customer_id: C_GAP, subscription_id: S06, start_date: "2024-03-01", end_date: "2024-04-01"}
+          # C_NESTED: S09 starts after S08 ends, but still inside S07
+          - {customer_id: C_NESTED, subscription_id: S07, start_date: "2024-01-01", end_date: "2024-12-01"}
+          - {customer_id: C_NESTED, subscription_id: S08, start_date: "2024-02-01", end_date: "2024-03-01"}
+          - {customer_id: C_NESTED, subscription_id: S09, start_date: "2024-06-01", end_date: "2024-07-01"}
+          # C_ONGOING: an open-ended subscription absorbs later ones
+          - {customer_id: C_ONGOING, subscription_id: S10, start_date: "2024-01-01", end_date: null}
+          - {customer_id: C_ONGOING, subscription_id: S11, start_date: "2025-01-01", end_date: "2025-02-01"}
+    expect:
+      rows:
+        - {customer_id: C_OVERLAP, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-05-01", subscriptions_in_period: 2}
+        - {customer_id: C_SAME_DAY, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: null, subscriptions_in_period: 2}
+        - {customer_id: C_GAP, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-02-01", subscriptions_in_period: 1}
+        - {customer_id: C_GAP, activity_period_number: 2, activity_start_date: "2024-03-01", activity_end_date: "2024-04-01", subscriptions_in_period: 1}
+        - {customer_id: C_NESTED, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-12-01", subscriptions_in_period: 3}
+        - {customer_id: C_ONGOING, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: null, subscriptions_in_period: 2}

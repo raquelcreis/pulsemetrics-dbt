@@ -1,17 +1,17 @@
 # PulseMetrics — SaaS Analytics Engineering
 
+![A stakeholder asks for SaaS health numbers and gets MRR, active customers, churn, and ARPA built by this project](docs/assets/pulsemetrics_cover.gif)
+
 PulseMetrics is an analytics engineering portfolio project that demonstrates how raw operational data can be transformed into reliable, tested, and documented business metrics for a fictional B2B SaaS company.
 
 The project combines synthetic data generation, Python-based ingestion, Snowflake, and dbt to model subscription revenue, customer activity, and customer churn.
 
-<img width="1200" height="675" alt="pulsemetrics_workflow" src="https://github.com/user-attachments/assets/4367c575-215f-4b8d-8f18-07aa979a7579" />
-
 ## Tech Stack
 
 - **Data warehouse:** Snowflake
-- **Transformation and modeling:** dbt Core, SQL
+- **Transformation and modeling:** dbt Core, SQL, dbt_utils
 - **Data generation and ingestion:** Python, pandas, Snowflake Connector
-- **Data quality:** dbt schema tests and custom SQL tests
+- **Data quality:** dbt data tests, custom SQL tests, dbt unit tests, and enforced model contracts
 - **Documentation:** dbt model documentation and metric methodology
 
 ## Architecture
@@ -31,14 +31,16 @@ flowchart TD
     H -.-> G
 ```
 
+![dbt workflow from staging through intermediate to marts, with the data tests, unit test, and contracts at each layer](docs/assets/pulsemetrics_workflow.gif)
+
 ### Data Layers
 
 | Layer | Purpose |
 |---|---|
 | `RAW` | Stores source datasets loaded from CSV files into Snowflake. |
 | `STAGING` | Standardizes source fields and applies foundational data quality checks. |
-| `INTERMEDIATE` | Implements reusable transformations for billing periods, subscription lifecycles, customer revenue, activity, and churn. |
-| `MARTS` | Exposes business-facing monthly revenue and customer churn metrics. |
+| `INTERMEDIATE` | Implements reusable transformations for billing periods, subscription lifecycles, customer revenue, activity, and churn, plus a shared reporting calendar. |
+| `MARTS` | Exposes business-facing monthly revenue and customer churn metrics, materialized as tables with enforced contracts. |
 
 ## Data Model
 
@@ -73,9 +75,9 @@ The monthly churn rate is calculated as:
 
 **Customers churned during the month ÷ customers active immediately before the month began**
 
-The numerator is restricted to customers belonging to the opening customer base. Reactivation is recognized only when a subsequent activity period has started by the current date.
+The numerator is restricted to customers belonging to the opening customer base. Reactivation is recognized only when a subsequent activity period has started by the as-of date.
 
-Monthly revenue and churn marts exclude the current incomplete month and future months.
+Monthly revenue and churn marts exclude the incomplete as-of month and future months. The as-of date defaults to the current date and can be fixed for reproducible results (see [Reproducing Metrics for a Fixed Date](#reproducing-metrics-for-a-fixed-date)).
 
 See [`docs/metrics/customer_churn.md`](docs/metrics/customer_churn.md) for the churn methodology, assumptions, and limitations.
 
@@ -97,12 +99,39 @@ The ingestion pipeline uses key-pair authentication. Private keys and passphrase
 
 ## Data Quality and Testing
 
-The project includes:
+Quality checks are layered so that each kind of failure is caught where it is cheapest to detect.
 
-- dbt schema tests and model-level data quality checks.
-- Custom SQL tests for business and data consistency.
-- Documentation of business metric definitions and modeling assumptions.
-- Unit tests for ingestion safety checks.
+| Check | Where | What it protects |
+|---|---|---|
+| Data tests | Staging | Keys are present and unique, relationships between sources hold, and categorical fields use accepted values. |
+| Grain tests | Intermediate | Each model has exactly one row per declared grain (for example, one row per customer and month), so marts cannot double count. |
+| Custom SQL tests | Intermediate and marts | Business rules hold: completed months only, consistent churn and reactivation fields, and ARPA and churn rates that reconcile with their components. |
+| Unit test | `int_customer_activity_periods` | The subscription-merging logic behind churn behaves as documented on fixed inputs. |
+| Model contracts | Marts | Column names, data types, and not-null constraints are enforced when the marts are built. |
+
+### Model Contracts
+
+Both marts declare an enforced dbt contract. The build fails if a column is renamed, removed, or changes type, instead of silently changing the tables that downstream consumers read.
+
+Data types include numeric precision, such as `number(38,2)` for contracted MRR, so values are not rounded when the table is created. Snowflake enforces `not_null` constraints but not `unique` constraints, so uniqueness of `month_start` remains covered by a data test.
+
+### Unit Test for Activity Periods
+
+Customer churn depends on how subscriptions are merged into continuous activity periods. The unit test `test_activity_periods_merge_rules` runs this logic on fixed subscriptions and checks that:
+
+- Overlapping subscriptions form a single period.
+- A subscription starting on the day the previous one ends continues the same period.
+- A gap between subscriptions starts a new period.
+- A short subscription nested inside a longer one does not split the period.
+- An open-ended subscription keeps the period open.
+
+Run only the unit tests with:
+
+```bash
+dbt test --select "test_type:unit"
+```
+
+### Ingestion Unit Tests
 
 The ingestion safety unit tests can be run locally without connecting to Snowflake:
 
@@ -165,30 +194,40 @@ The loader validates the datasets, loads temporary tables, checks row counts, an
 From the repository root, with the dbt profile and Snowflake environment configured:
 
 ```bash
+dbt deps
 dbt debug
 dbt compile
 dbt build
 ```
 
+- `dbt deps` installs the dbt packages declared in `packages.yml`.
 - `dbt debug` checks the project and connection configuration.
 - `dbt compile` compiles the models and tests.
-- `dbt build` runs the selected models and their associated tests and seeds as configured by the project.
+- `dbt build` runs the models, data tests, and unit tests in dependency order.
 
 These commands require a working Snowflake connection for warehouse-backed operations. They are provided as reproduction instructions, not as a guarantee that the warehouse is currently active.
+
+### Reproducing Metrics for a Fixed Date
+
+Every "completed month" and "has already happened" rule in the models and tests uses a single as-of date. It defaults to the current date. To reproduce the metrics as they were on a specific day, pass it as a variable:
+
+```bash
+dbt build --vars '{"as_of_date": "2026-09-30"}'
+```
 
 ## Repository Structure
 
 ```text
 data_generation/   Synthetic data generation, ingestion, and unit tests
-docs/              Metric definitions and methodology
+docs/              Metric definitions, methodology, and README visuals
 infrastructure/    Snowflake setup, tables, roles, and permissions
-macros/            Custom dbt macros
+macros/            Custom dbt macros (schema naming, as-of date)
 models/
   staging/         Source standardization and foundational tests
   intermediate/    Reusable business logic
   marts/           Business-facing analytical models
-seeds/             Static reference data
 tests/             Custom SQL data quality tests
+packages.yml       dbt package dependencies
 ```
 
 ## Current Status
@@ -200,12 +239,15 @@ Implemented:
 - dbt staging, intermediate, and mart models.
 - Monthly contracted revenue and customer churn proxy metrics.
 - Business metric documentation and data quality tests.
+- Grain tests for every intermediate model.
+- Enforced data contracts on both marts.
+- dbt unit test for the activity-period logic behind churn.
+- Shared reporting calendar and configurable as-of date for reproducible metrics.
 - Local unit tests for ingestion safety.
 
 Planned improvements:
 
 - Additional business-facing marts and analytical insights.
-- Automated validation through continuous integration (CI).
 
 ## Scope and Limitations
 

@@ -43,12 +43,12 @@ churn_events AS (
         next_activity_start_date,
 
         CASE
-            WHEN next_activity_start_date <= CURRENT_DATE() THEN TRUE
+            WHEN next_activity_start_date <= {{ as_of_date() }} THEN TRUE
             ELSE FALSE
         END AS is_reactivated,
 
         CASE
-            WHEN next_activity_start_date <= CURRENT_DATE()
+            WHEN next_activity_start_date <= {{ as_of_date() }}
             THEN DATEDIFF(
                 DAY,
                 activity_end_date,
@@ -60,7 +60,7 @@ churn_events AS (
     FROM periods_with_next
 
     WHERE activity_end_date IS NOT NULL
-      AND activity_end_date <= CURRENT_DATE()
+      AND activity_end_date <= {{ as_of_date() }}
 
 )
 
