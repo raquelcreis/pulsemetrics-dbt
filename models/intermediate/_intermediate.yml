@@ -109,3 +109,39 @@ models:
       - name: activity_period_number
         data_tests:
           - not_null
+
+unit_tests:
+  - name: test_activity_periods_merge_rules
+    description: >
+      Proves how subscriptions collapse into continuous activity periods:
+      overlaps and same-day transitions merge, a real gap starts a new
+      period, a short subscription nested inside a longer one does not
+      split it, and an ongoing subscription keeps the period open.
+    model: int_customer_activity_periods
+    given:
+      - input: ref('stg_subscriptions')
+        rows:
+          # C_OVERLAP: second subscription starts before the first ends
+          - {customer_id: C_OVERLAP, subscription_id: S01, start_date: "2024-01-01", end_date: "2024-03-01"}
+          - {customer_id: C_OVERLAP, subscription_id: S02, start_date: "2024-02-01", end_date: "2024-05-01"}
+          # C_SAME_DAY: plan change on the same day the previous one ends
+          - {customer_id: C_SAME_DAY, subscription_id: S03, start_date: "2024-01-01", end_date: "2024-02-01"}
+          - {customer_id: C_SAME_DAY, subscription_id: S04, start_date: "2024-02-01", end_date: null}
+          # C_GAP: one month without any subscription -> two periods
+          - {customer_id: C_GAP, subscription_id: S05, start_date: "2024-01-01", end_date: "2024-02-01"}
+          - {customer_id: C_GAP, subscription_id: S06, start_date: "2024-03-01", end_date: "2024-04-01"}
+          # C_NESTED: S09 starts after S08 ends, but still inside S07
+          - {customer_id: C_NESTED, subscription_id: S07, start_date: "2024-01-01", end_date: "2024-12-01"}
+          - {customer_id: C_NESTED, subscription_id: S08, start_date: "2024-02-01", end_date: "2024-03-01"}
+          - {customer_id: C_NESTED, subscription_id: S09, start_date: "2024-06-01", end_date: "2024-07-01"}
+          # C_ONGOING: an open-ended subscription absorbs later ones
+          - {customer_id: C_ONGOING, subscription_id: S10, start_date: "2024-01-01", end_date: null}
+          - {customer_id: C_ONGOING, subscription_id: S11, start_date: "2025-01-01", end_date: "2025-02-01"}
+    expect:
+      rows:
+        - {customer_id: C_OVERLAP, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-05-01", subscriptions_in_period: 2}
+        - {customer_id: C_SAME_DAY, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: null, subscriptions_in_period: 2}
+        - {customer_id: C_GAP, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-02-01", subscriptions_in_period: 1}
+        - {customer_id: C_GAP, activity_period_number: 2, activity_start_date: "2024-03-01", activity_end_date: "2024-04-01", subscriptions_in_period: 1}
+        - {customer_id: C_NESTED, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: "2024-12-01", subscriptions_in_period: 3}
+        - {customer_id: C_ONGOING, activity_period_number: 1, activity_start_date: "2024-01-01", activity_end_date: null, subscriptions_in_period: 2}
