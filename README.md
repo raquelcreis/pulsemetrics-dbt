@@ -1,5 +1,7 @@
 # PulseMetrics — SaaS Analytics Engineering
 
+![A stakeholder asks for SaaS health numbers and gets MRR, active customers, churn, and ARPA built by this project](docs/assets/pulsemetrics_cover.gif)
+
 PulseMetrics is an analytics engineering portfolio project that demonstrates how raw operational data can be transformed into reliable, tested, and documented business metrics for a fictional B2B SaaS company.
 
 The project combines synthetic data generation, Python-based ingestion, Snowflake, and dbt to model subscription revenue, customer activity, and customer churn.
@@ -28,6 +30,8 @@ flowchart TD
     H -.-> F
     H -.-> G
 ```
+
+![dbt workflow from staging through intermediate to marts, with the data tests, unit test, and contracts at each layer](docs/assets/pulsemetrics_workflow.gif)
 
 ### Data Layers
 
@@ -215,7 +219,7 @@ dbt build --vars '{"as_of_date": "2026-09-30"}'
 
 ```text
 data_generation/   Synthetic data generation, ingestion, and unit tests
-docs/              Metric definitions and methodology
+docs/              Metric definitions, methodology, and README visuals
 infrastructure/    Snowflake setup, tables, roles, and permissions
 macros/            Custom dbt macros (schema naming, as-of date)
 models/
