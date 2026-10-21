@@ -6,6 +6,8 @@ PulseMetrics is an analytics engineering portfolio project that demonstrates how
 
 The project combines synthetic data generation, Python-based ingestion, Snowflake, and dbt to model subscription revenue, customer activity, and customer churn.
 
+<img width="1200" height="675" alt="pulsemetrics_workflow" src="https://github.com/user-attachments/assets/4367c575-215f-4b8d-8f18-07aa979a7579" />
+
 ## Tech Stack
 
 - **Data warehouse:** Snowflake
