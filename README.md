@@ -199,7 +199,7 @@ dbt build
 - `dbt deps` installs the dbt packages declared in `packages.yml`.
 - `dbt debug` checks the project and connection configuration.
 - `dbt compile` compiles the models and tests.
-- `dbt build` runs the models, seeds, data tests, and unit tests in dependency order.
+- `dbt build` runs the models, data tests, and unit tests in dependency order.
 
 These commands require a working Snowflake connection for warehouse-backed operations. They are provided as reproduction instructions, not as a guarantee that the warehouse is currently active.
 
@@ -222,7 +222,6 @@ models/
   staging/         Source standardization and foundational tests
   intermediate/    Reusable business logic
   marts/           Business-facing analytical models
-seeds/             Static reference data
 tests/             Custom SQL data quality tests
 packages.yml       dbt package dependencies
 ```
