@@ -17,8 +17,7 @@ models:
         constraints:
           - type: not_null
         description: First day of the reporting month.
-        tests:
-          - not_null
+        data_tests:
           - unique
 
       - name: active_customers
@@ -26,32 +25,24 @@ models:
         constraints:
           - type: not_null
         description: Distinct customers with at least one active subscription at month end.
-        tests:
-          - not_null
 
       - name: active_subscriptions
         data_type: number(30,0)
         constraints:
           - type: not_null
         description: Subscriptions active at month end.
-        tests:
-          - not_null
 
       - name: contracted_mrr
         data_type: number(38,2)
         constraints:
           - type: not_null
         description: Month-end contracted run rate from monthly plans, in USD; not prorated or payment-derived.
-        tests:
-          - not_null
 
       - name: arpa
         data_type: number(38,8)
         constraints:
           - type: not_null
         description: Month-end contracted MRR divided by month-end active customers, in USD.
-        tests:
-          - not_null
 
 
   - name: mart_monthly_churn
@@ -70,26 +61,19 @@ models:
         constraints:
           - type: not_null
         data_tests:
-          - not_null
           - unique
 
       - name: opening_active_customers
         data_type: number(18,0)
         constraints:
           - type: not_null
-        data_tests:
-          - not_null
 
       - name: churned_customers
         data_type: number(18,0)
         constraints:
           - type: not_null
-        data_tests:
-          - not_null
 
       - name: customer_churn_rate
         data_type: float
         constraints:
           - type: not_null
-        data_tests:
-          - not_null
