@@ -28,43 +28,10 @@ churn_events AS (
 
 ),
 
-month_bounds AS (
-
-    SELECT
-        DATE_TRUNC('MONTH', MIN(activity_start_date))::DATE
-            AS first_month,
-        DATEADD(
-            MONTH,
-            -1,
-            DATE_TRUNC('MONTH', CURRENT_DATE())
-        )::DATE
-            AS last_month
-    FROM activity_periods
-
-),
-
-month_sequence AS (
-
-    SELECT SEQ4() AS month_number
-    FROM TABLE(GENERATOR(ROWCOUNT => 100))
-
-),
-
 months AS (
 
-    SELECT
-        DATEADD(
-            MONTH,
-            seq.month_number,
-            bounds.first_month
-        )::DATE AS month_start
-    FROM month_bounds AS bounds
-    CROSS JOIN month_sequence AS seq
-    WHERE DATEADD(
-        MONTH,
-        seq.month_number,
-        bounds.first_month
-    ) <= bounds.last_month
+    SELECT month_start
+    FROM {{ ref('int_calendar_months') }}
 
 ),
 

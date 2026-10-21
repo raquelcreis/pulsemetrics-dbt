@@ -18,42 +18,10 @@ WITH subscriptions AS (
 
 ),
 
-month_bounds AS (
-
-    SELECT
-        DATE_TRUNC('MONTH', MIN(start_date))::DATE AS first_month,
-        DATEADD(
-            MONTH,
-            -1,
-            DATE_TRUNC('MONTH', CURRENT_DATE())
-        )::DATE AS last_month
-    FROM subscriptions
-
-),
-
-month_sequence AS (
-
-    SELECT
-        SEQ4() AS month_number
-    FROM TABLE(GENERATOR(ROWCOUNT => 100))
-
-),
-
 billing_months AS (
 
-    SELECT
-        DATEADD(
-            MONTH,
-            seq.month_number,
-            bounds.first_month
-        )::DATE AS month_start
-    FROM month_bounds AS bounds
-    CROSS JOIN month_sequence AS seq
-    WHERE DATEADD(
-        MONTH,
-        seq.month_number,
-        bounds.first_month
-    ) <= bounds.last_month
+    SELECT month_start
+    FROM {{ ref('int_calendar_months') }}
 
 ),
 

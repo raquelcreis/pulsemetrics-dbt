@@ -1,6 +1,16 @@
 version: 2
 
 models:
+  - name: int_calendar_months
+    description: >
+      Reporting calendar. One row per month from the first subscription
+      month through the last completed month before the as-of date.
+    columns:
+      - name: month_start
+        data_tests:
+          - not_null
+          - unique
+
   - name: int_subscription_periods
     description: >
       Month-end subscription snapshots. One row per subscription and
